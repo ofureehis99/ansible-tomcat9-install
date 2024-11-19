@@ -1,0 +1,90 @@
+---
+- name: Install Java
+  ansible.builtin.yum:
+    name: java-1.8.0-openjdk
+    state: present
+
+- name: Create Tomcat user group
+  ansible.builtin.group:
+    name: tomcat
+    state: present
+
+- name: Create Tomcat user
+  ansible.builtin.user:
+    name: tomcat
+    group: tomcat
+    shell: /bin/nologin
+    system: yes
+
+- name: Download Tomcat 9
+  ansible.builtin.copy:
+    src: ../files/apache-tomcat-9.0.33.tar.gz
+    dest: /tmp/apache-tomcat-9.0.33.tar.gz
+
+- name: Create Tomcat installation directory
+  ansible.builtin.file:
+    path: /opt/tomcat
+    state: directory
+    owner: tomcat
+    group: tomcat
+    mode: '0755'
+
+- name: Extract Tomcat
+  ansible.builtin.unarchive:
+    src: /tmp/apache-tomcat-9.0.33.tar.gz
+    dest: /opt/tomcat
+    remote_src: yes
+    creates: /opt/tomcat/apache-tomcat-9.0.33
+
+- name: Update permissions for Tomcat
+  ansible.builtin.file:
+    path: /opt/tomcat/apache-tomcat-9.0.33
+    owner: tomcat
+    group: tomcat
+    recurse: yes
+
+- name: Copy tomcat-users.xml for users
+  ansible.builtin.template:
+    src: tomcat-users.xml
+    dest: /opt/tomcat/apache-tomcat-9.0.33/conf/tomcat-users.xml
+    owner: tomcat
+    group: tomcat
+
+- name: Copy context.xml
+  ansible.builtin.template:
+    src: context.xml
+    dest: /opt/tomcat/apache-tomcat-9.0.33/webapps/manager/META-INF/context.xml
+    owner: tomcat
+    group: tomcat
+
+- name: Copy context.xml2
+  ansible.builtin.template:
+    src: context.xml2
+    dest: /opt/tomcat/apache-tomcat-9.0.33/webapps/host-manager/META-INF/context.xml
+    owner: tomcat
+    group: tomcat
+
+- name: Copy and configure tomcat.service file
+  ansible.builtin.template:
+    src: tomcat.service
+    dest: /etc/systemd/system/tomcat.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Reload systemd to apply the Tomcat service
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Enable and start Tomcat service
+  ansible.builtin.systemd:
+    name: tomcat
+    enabled: true
+    state: started
+
+- name: open port 8080/tcp
+  ansible.posix.firewalld:
+    port: 8080/tcp
+    permanent: true
+    zone: public
+    state: enabled
