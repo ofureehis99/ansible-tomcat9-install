@@ -82,9 +82,3 @@
     enabled: true
     state: started
 
-- name: open port 8080/tcp
-  ansible.posix.firewalld:
-    port: 8080/tcp
-    permanent: true
-    zone: public
-    state: enabled
